@@ -11,7 +11,7 @@ pub struct BoardDisplay {
 impl egui::widgets::Widget for BoardDisplay {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let (rect, response) =
-            ui.allocate_exact_size(egui::Vec2::splat(self.size), egui::Sense::click());
+            ui.allocate_exact_size(egui::Vec2::splat(self.size), egui::Sense::click_and_drag());
 
         let painter = ui.painter_at(rect);
 

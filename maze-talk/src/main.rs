@@ -18,8 +18,8 @@ fn main() -> eframe::Result {
 #[derive(Default, PartialEq, Eq)]
 enum Slide {
     IntroPage,
-    #[default]
     ArraySolver,
+    #[default]
     BitboardDemo,
 }
 
