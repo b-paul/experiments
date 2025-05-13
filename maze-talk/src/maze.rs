@@ -9,15 +9,22 @@ pub struct Maze {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Direction {
+pub enum Direction {
     Left,
     Right,
     Up,
     Down,
 }
 
+pub const DIRS: [Direction; 4] = [
+    Direction::Left,
+    Direction::Right,
+    Direction::Up,
+    Direction::Down,
+];
+
 impl Direction {
-    fn offset(self) -> (i32, i32) {
+    pub fn offset(self) -> (i32, i32) {
         match self {
             Direction::Left => (-1, 0),
             Direction::Right => (1, 0),
@@ -26,7 +33,7 @@ impl Direction {
         }
     }
 
-    fn translate(self, p: (usize, usize), n: usize) -> Option<(usize, usize)> {
+    pub fn translate(self, p: (usize, usize), n: usize) -> Option<(usize, usize)> {
         let (dx, dy) = self.offset();
         let (x, y) = (p.0 as i32 + dx, p.1 as i32 + dy);
         x.try_into()
@@ -39,13 +46,6 @@ impl Direction {
 impl Maze {
     pub fn random(n: usize) -> Self {
         use rand::prelude::*;
-
-        const DIRS: [Direction; 4] = [
-            Direction::Left,
-            Direction::Right,
-            Direction::Up,
-            Direction::Down,
-        ];
 
         let vertical_walls = (0..n).map(|_| vec![true; n]).collect::<Vec<_>>();
         let horizontal_walls = (0..n).map(|_| vec![true; n]).collect::<Vec<_>>();
@@ -60,8 +60,7 @@ impl Maze {
 
         let mut visited = HashSet::new();
         let mut to_visit = (0..n)
-            .map(|a| (0..n).map(move |b| (a, b)))
-            .flatten()
+            .flat_map(|a| (0..n).map(move |b| (a, b)))
             .collect::<HashSet<_>>();
 
         let mut rng = rand::rng();
@@ -77,7 +76,7 @@ impl Maze {
             path_set.insert(p);
             // Perform a random walk, resetting the path if we collide our walk, and ending when we
             // reach the visited part of the maze.
-            while !visited.contains(&path.last().unwrap()) {
+            while !visited.contains(path.last().unwrap()) {
                 let (dir, next) = DIRS
                     .iter()
                     .flat_map(|d| d.translate(*path.last().unwrap(), n).map(|p| (d, p)))
