@@ -8,25 +8,47 @@ pub struct ArraySolverApp {
     maze: crate::maze::Maze,
     grid: Vec<Vec<bool>>,
     visited: Vec<Vec<bool>>,
+    enqueued: BTreeSet<(usize, usize)>,
     // The last point we checked
     next: Option<(usize, usize)>,
 
     // (point, distance)
     queue: VecDeque<((usize, usize), usize)>,
+
+    pushes: usize,
+    pops: usize,
+    contains: usize,
+    inserts: usize,
+
+    auto: bool,
+    dfs: bool,
+
+    len: Option<usize>,
+
+    start_time: f64,
 }
 
 impl ArraySolverApp {
-    fn reset(&mut self) {
+    fn reset(&mut self, time: f64) {
         self.maze = crate::maze::Maze::random(N);
         self.grid = self.maze.grid();
         self.visited = self
             .maze
             .grid()
-            .into_iter()
-            .map(|r| r.into_iter().map(|_| false).collect())
+            .iter()
+            .map(|r| r.iter().map(|_| false).collect())
             .collect();
+        self.enqueued = BTreeSet::new();
+        self.next = Some((1, 0));
         self.queue = VecDeque::new();
         self.queue.push_back(((1, 0), 0));
+        self.enqueued.insert((1, 0));
+        self.pushes = 0;
+        self.pops = 0;
+        self.contains = 0;
+        self.inserts = 0;
+        self.len = None;
+        self.start_time = time;
     }
 
     fn colour_grid(&self) -> Vec<Vec<egui::Color32>> {
@@ -50,31 +72,49 @@ impl ArraySolverApp {
     }
 
     fn step(&mut self) {
-        let Some((p, dist)) = self.queue.pop_front() else {
+        self.pops += 1;
+        // oh god what have i done
+        let Some((p, dist)) = (if self.dfs {
+            self.queue.pop_back()
+        } else {
+            self.queue.pop_front()
+        }) else {
             return;
         };
         self.visited[p.1][p.0] = true;
 
+        self.contains += 1;
         if self.visited[2 * N][2 * N - 1] {
             self.next = None;
+            self.len = Some(dist);
             self.queue = VecDeque::new();
             return;
         }
 
-        let queued = self
-            .queue
-            .clone()
-            .into_iter()
-            .map(|(p, _)| p)
-            .collect::<BTreeSet<_>>();
+        let enqueued = self.enqueued.clone();
         for next in super::maze::DIRS
             .into_iter()
             .flat_map(|d| d.translate(p, 2 * N + 1))
-            .filter(|&(x, y)| !self.grid[y][x] && !queued.contains(&(x, y)) && !self.visited[y][x])
+            .filter(|&(x, y)| {
+                self.contains += 1;
+                !self.grid[y][x] && !enqueued.contains(&(x, y))
+            })
         {
+            self.pushes += 1;
             self.queue.push_back((next, dist + 1));
+            self.inserts += 1;
+            self.enqueued.insert(next);
         }
-        self.next = self.queue.front().map(|&(p, _)| p);
+        self.next = if self.dfs {
+            self.queue.back()
+        } else {
+            self.queue.front()
+        }
+        .map(|&(p, _)| p);
+    }
+
+    fn done(&self) -> bool {
+        self.visited[2 * N][2 * N - 1]
     }
 }
 
@@ -85,16 +125,29 @@ impl Default for ArraySolverApp {
             maze,
             grid: Vec::new(),
             visited: Vec::new(),
+            enqueued: BTreeSet::new(),
             next: Some((1, 0)),
             queue: VecDeque::new(),
+            pushes: 0,
+            pops: 0,
+            contains: 0,
+            inserts: 0,
+
+            auto: false,
+            dfs: false,
+            len: None,
+            start_time: 0.,
         };
-        app.reset();
+        app.reset(0.);
         app
     }
 }
 
 impl eframe::App for ArraySolverApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+        let time = ctx.input(|i| i.time);
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("Array solver");
 
@@ -107,10 +160,28 @@ impl eframe::App for ArraySolverApp {
             ui.add(maze_display);
 
             if ui.button("Generate maze").clicked() {
-                self.reset();
+                self.reset(time);
             }
+            let mut stepped = false;
             if ui.button("Step").clicked() {
                 self.step();
+                stepped = true;
+            }
+
+            ui.checkbox(&mut self.auto, "Autosolve");
+            if self.auto && !stepped && !self.done() && time - self.start_time > 0.05 {
+                self.step();
+                self.start_time = time;
+            }
+            ui.checkbox(&mut self.dfs, "DFS");
+
+            ui.label(format!("Queue pushes: {}", self.pushes));
+            ui.label(format!("Queue pops: {}", self.pops));
+            ui.label(format!("Set contains: {}", self.contains));
+            ui.label(format!("Set insertions: {}", self.inserts));
+
+            if let Some(dist) = self.len {
+                ui.label(format!("Length: {dist}"));
             }
         });
     }
