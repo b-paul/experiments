@@ -72,6 +72,9 @@ impl ArraySolverApp {
     }
 
     fn step(&mut self) {
+        if self.done() {
+            return;
+        }
         self.pops += 1;
         // oh god what have i done
         let Some((p, dist)) = (if self.dfs {

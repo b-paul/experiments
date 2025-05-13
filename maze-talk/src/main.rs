@@ -2,6 +2,7 @@ use eframe::egui;
 
 mod array_solver;
 mod bitboard_demo;
+mod bitboard_solver;
 mod board;
 mod intro;
 mod maze;
@@ -19,8 +20,9 @@ fn main() -> eframe::Result {
 enum Slide {
     IntroPage,
     ArraySolver,
-    #[default]
     BitboardDemo,
+    #[default]
+    BitboardSolver,
 }
 
 #[derive(Default)]
@@ -30,6 +32,7 @@ struct App {
     intro_page: intro::IntroApp,
     array_solver: array_solver::ArraySolverApp,
     bitboard_demo: bitboard_demo::BitboardDemoApp,
+    bitboard_solver: bitboard_solver::BitboardSolverApp,
 }
 
 impl App {
@@ -43,6 +46,7 @@ impl App {
             Slide::IntroPage => self.intro_page.update(ctx, frame),
             Slide::ArraySolver => self.array_solver.update(ctx, frame),
             Slide::BitboardDemo => self.bitboard_demo.update(ctx, frame),
+            Slide::BitboardSolver => self.bitboard_solver.update(ctx, frame),
         }
     }
 }
@@ -70,6 +74,12 @@ impl eframe::App for App {
                     .clicked()
                 {
                     self.slide = Slide::BitboardDemo;
+                }
+                if ui
+                    .selectable_label(self.slide == Slide::BitboardSolver, "Bitboard solver")
+                    .clicked()
+                {
+                    self.slide = Slide::BitboardSolver;
                 }
             })
         });
