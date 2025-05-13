@@ -1,51 +1,145 @@
-pub struct Maze<const N: usize> {
-    walls: [[bool; N]; N],
+use std::collections::HashSet;
+
+pub struct Maze {
+    // Walls are on the bottom of the square
+    vertical_walls: Vec<Vec<bool>>,
+    // Walls are on the right of the square
+    horizontal_walls: Vec<Vec<bool>>,
+    size: usize,
 }
 
-impl<const N: usize> Default for Maze<N> {
-    fn default() -> Self {
-        // this is a bit of an insane definition but idc
-        Self::random()
+#[derive(Debug, Clone, Copy)]
+enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl Direction {
+    fn offset(self) -> (i32, i32) {
+        match self {
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
+            Direction::Up => (0, -1),
+            Direction::Down => (0, 1),
+        }
+    }
+
+    fn translate(self, p: (usize, usize), n: usize) -> Option<(usize, usize)> {
+        let (dx, dy) = self.offset();
+        let (x, y) = (p.0 as i32 + dx, p.1 as i32 + dy);
+        x.try_into()
+            .ok()
+            .filter(|&x| x < n)
+            .and_then(|x| y.try_into().ok().filter(|&y| y < n).map(|y| (x, y)))
     }
 }
 
-impl<const N: usize> Maze<N> {
-    pub fn random() -> Self {
-        // blah blah yeah this isn't uniform over all mazes sorry it was easy to implement i'll fix
-        // it later
+impl Maze {
+    pub fn random(n: usize) -> Self {
         use rand::prelude::*;
 
-        const OFFSETS: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        const DIRS: [Direction; 4] = [
+            Direction::Left,
+            Direction::Right,
+            Direction::Up,
+            Direction::Down,
+        ];
 
-        let mut walls = [[true; N]; N];
-        let mut visited = [[false; N]; N];
-        walls[0][1] = false;
+        let vertical_walls = (0..n).map(|_| vec![true; n]).collect::<Vec<_>>();
+        let horizontal_walls = (0..n).map(|_| vec![true; n]).collect::<Vec<_>>();
+
+        let mut maze = Self {
+            vertical_walls,
+            horizontal_walls,
+            size: n,
+        };
+
+        // Wilson's algorithm (read from wikipedia)
+
+        let mut visited = HashSet::new();
+        let mut to_visit = (0..n)
+            .map(|a| (0..n).map(move |b| (a, b)))
+            .flatten()
+            .collect::<HashSet<_>>();
 
         let mut rng = rand::rng();
 
-        let mut stack = vec![(1, 1)];
-        while let Some((x, y)) = stack.pop() {
-            walls[y as usize][x as usize] = false;
-            visited[y as usize][x as usize] = true;
+        let &initial = to_visit.iter().choose(&mut rng).unwrap();
+        to_visit.remove(&initial);
+        visited.insert(initial);
 
-            if let Some(((wx, wy), next)) = OFFSETS
-                .map(|(dx, dy)| ((x + dx, y + dy), (x + 2 * dx, y + 2 * dy)))
-                .iter()
-                .filter(|(_, (x, y))| 0 <= *x && *x < N as i32 && 0 <= *y && *y < N as i32)
-                .filter(|(_, (x, y))| !visited[*y as usize][*x as usize])
-                .choose(&mut rng)
-            {
-                stack.push((x, y));
-                stack.push(*next);
-                walls[*wy as usize][*wx as usize] = false;
+        while let Some(&p) = to_visit.iter().choose(&mut rng) {
+            let mut path = vec![p];
+            let mut dirs = Vec::new();
+            let mut path_set = HashSet::new();
+            path_set.insert(p);
+            // Perform a random walk, resetting the path if we collide our walk, and ending when we
+            // reach the visited part of the maze.
+            while !visited.contains(&path.last().unwrap()) {
+                let (dir, next) = DIRS
+                    .iter()
+                    .flat_map(|d| d.translate(*path.last().unwrap(), n).map(|p| (d, p)))
+                    .choose(&mut rng)
+                    .unwrap();
+
+                if path_set.contains(&next) {
+                    while *path.last().unwrap() != next {
+                        let tail = path.pop().unwrap();
+                        dirs.pop();
+                        path_set.remove(&tail);
+                    }
+                } else {
+                    path.push(next);
+                    dirs.push(dir);
+                    path_set.insert(next);
+                    if visited.contains(&next) {
+                        // Remove all of the walls we came into in the path!
+                        path.pop();
+                        while let Some(&dir) = dirs.pop() {
+                            let p = path.pop().unwrap();
+                            maze.remove_wall(p, dir);
+                            to_visit.remove(&p);
+                            visited.insert(p);
+                        }
+                        break;
+                    }
+                }
             }
         }
-        walls[N-1][N-2] = false;
-
-        Self { walls }
+        maze
     }
 
-    pub fn grid(&self) -> [[bool; N]; N] {
-        self.walls
+    fn remove_wall(&mut self, (x, y): (usize, usize), dir: Direction) {
+        match dir {
+            Direction::Left => self.horizontal_walls[y][x - 1] = false,
+            Direction::Right => self.horizontal_walls[y][x] = false,
+            Direction::Up => self.vertical_walls[y - 1][x] = false,
+            Direction::Down => self.vertical_walls[y][x] = false,
+        }
+    }
+
+    pub fn grid(&self) -> Vec<Vec<bool>> {
+        let mut grid = (0..self.size * 2 + 1)
+            .map(|_| vec![true; self.size * 2 + 1])
+            .collect::<Vec<_>>();
+
+        grid[0][1] = false;
+        grid[self.size * 2][self.size * 2 - 1] = false;
+
+        for x in 0..self.size {
+            for y in 0..self.size {
+                grid[2 * y + 1][2 * x + 1] = false;
+                if !self.vertical_walls[y][x] {
+                    grid[2 * y + 2][2 * x + 1] = false;
+                }
+                if !self.horizontal_walls[y][x] {
+                    grid[2 * y + 1][2 * x + 2] = false;
+                }
+            }
+        }
+
+        grid
     }
 }
