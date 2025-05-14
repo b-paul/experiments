@@ -22,6 +22,7 @@ enum Slide {
 
 struct App {
     slide: Slide,
+    show_settings: bool,
 
     gui_scale: f32,
 
@@ -35,6 +36,7 @@ impl Default for App {
     fn default() -> Self {
         Self {
             slide: Default::default(),
+            show_settings: Default::default(),
             gui_scale: 1.,
             intro_page: Default::default(),
             array_solver: Default::default(),
@@ -69,9 +71,11 @@ impl eframe::App for App {
             }
         });
 
-        egui::Window::new("Settings").show(ctx, |ui| {
-            ui.add(egui::Slider::new(&mut self.gui_scale, 0.5..=3.0).text("Gui scale"));
-        });
+        if self.show_settings {
+            egui::Window::new("Settings").show(ctx, |ui| {
+                ui.add(egui::Slider::new(&mut self.gui_scale, 0.5..=3.0).text("Gui scale"));
+            });
+        }
 
         self.array_solver.gui_scale = self.gui_scale;
         self.bitboard_demo.gui_scale = self.gui_scale;
@@ -80,7 +84,9 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 egui::widgets::global_theme_preference_switch(ui);
+
                 ui.separator();
+
                 if ui
                     .selectable_label(self.slide == Slide::IntroPage, "Intro")
                     .clicked()
@@ -104,6 +110,15 @@ impl eframe::App for App {
                     .clicked()
                 {
                     self.slide = Slide::BitboardSolver;
+                }
+
+                ui.separator();
+
+                if ui
+                    .selectable_label(self.show_settings, "Settings")
+                    .clicked()
+                {
+                    self.show_settings = !self.show_settings;
                 }
             })
         });

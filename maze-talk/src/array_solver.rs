@@ -99,10 +99,10 @@ impl ArraySolverApp {
         self.queue = VecDeque::new();
         self.queue.push_back(((1, 0), 0));
         self.enqueued.insert((1, 0));
-        self.pushes = 0;
+        self.pushes = 1;
         self.pops = 0;
         self.contains = 0;
-        self.inserts = 0;
+        self.inserts = 1;
         self.len = None;
         self.start_time = time;
     }

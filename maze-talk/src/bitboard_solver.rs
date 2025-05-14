@@ -14,8 +14,7 @@ pub fn min_dist_bitboards(walls: u64) -> usize {
     while visited & 1 == 0 {
         visited =
             (visited | (!L & visited) << 1 | (!R & visited) >> 1 | visited << 7 | visited >> 7)
-                & !walls
-                & !(1 << 63);
+                & !walls;
         dist += 1;
     }
     dist
@@ -96,10 +95,11 @@ impl BitboardSolverApp {
 
         self.shifts += 4;
         self.ors += 4;
-        self.ands += 4;
+        self.ands += 3;
         self.visited = (v | (!L & v) << 1 | (!R & v) >> 1 | v << 7 | v >> 7) & !m;
         self.steps += 1;
 
+        self.ands += 1;
         if self.done() {
             self.len = Some(self.steps);
         }
