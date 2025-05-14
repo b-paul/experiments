@@ -2,6 +2,25 @@ use eframe::egui;
 
 const N: usize = 4;
 
+const ALGO: &'static str ="
+pub fn min_dist_bitboards(walls: u64) -> usize {
+    const L: u64 = 0b100000010000001000000100000010000001000000100000010000001000000;
+    const R: u64 = 0b000000100000010000001000000100000010000001000000100000010000001;
+
+    let mut visited = 1 << 62;
+    let mut dist = 0;
+
+    // While we haven't reached the endpoint...
+    while visited & 1 == 0 {
+        visited =
+            (visited | (!L & visited) << 1 | (!R & visited) >> 1 | visited << 7 | visited >> 7)
+                & !walls
+                & !(1 << 63);
+        dist += 1;
+    }
+    dist
+}";
+
 pub struct BitboardSolverApp {
     pub gui_scale: f32,
 
@@ -25,23 +44,11 @@ pub struct BitboardSolverApp {
 impl BitboardSolverApp {
     fn reset(&mut self, time: f64) {
         self.maze = crate::maze::Maze::random(N);
-        self.grid = 0;
+        self.grid = self.maze.bb();
         self.visited = 0;
         self.shifts = 0;
         self.ors = 0;
         self.ands = 0;
-
-        for (y, row) in self.maze.grid().into_iter().enumerate() {
-            for (x, b) in row.into_iter().enumerate() {
-                if x == 0 || x == 8 {
-                    continue;
-                }
-                if b {
-                    // should probably put this indexing stuff in a function or something
-                    self.grid |= 1 << (7 * (8 - y) + (6 - (x - 1)));
-                }
-            }
-        }
 
         self.visited |= 1 << 62;
 
@@ -90,14 +97,12 @@ impl BitboardSolverApp {
         self.shifts += 4;
         self.ors += 4;
         self.ands += 4;
-        self.visited = (v | (!L & v) << 1 | (!R & v) >> 1 | v << 7 | v >> 7) & !m & !(1 << 63);
+        self.visited = (v | (!L & v) << 1 | (!R & v) >> 1 | v << 7 | v >> 7) & !m;
         self.steps += 1;
 
         if self.done() {
             self.len = Some(self.steps);
         }
-
-        println!("{:064b}", self.visited);
     }
 }
 
@@ -128,36 +133,44 @@ impl eframe::App for BitboardSolverApp {
         let time = ctx.input(|i| i.time);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let grid = self.colour_grid();
-            let maze_display = crate::board::BoardDisplay {
-                size: 256. * self.gui_scale,
-                grid,
-                n: 2 * N + 1,
-            };
-            ui.add(maze_display);
+            ui.horizontal_top(|ui| {
+                ui.vertical(|ui| {
+                    let grid = self.colour_grid();
+                    let maze_display = crate::board::BoardDisplay {
+                        size: 256. * self.gui_scale,
+                        grid,
+                        n: 2 * N + 1,
+                    };
+                    ui.add(maze_display);
 
-            if ui.button("Generate maze").clicked() {
-                self.reset(time);
-            }
-            let mut stepped = false;
-            if ui.button("Step").clicked() {
-                self.step();
-                stepped = true;
-            }
+                    if ui.button("Generate maze").clicked() {
+                        self.reset(time);
+                    }
+                    let mut stepped = false;
+                    if ui.button("Step").clicked() {
+                        self.step();
+                        stepped = true;
+                    }
 
-            ui.checkbox(&mut self.auto, "Autosolve");
-            if self.auto && !stepped && !self.done() && time - self.start_time > 0.05 {
-                self.step();
-                self.start_time = time;
-            }
+                    ui.checkbox(&mut self.auto, "Autosolve");
+                    if self.auto && !stepped && !self.done() && time - self.start_time > 0.05 {
+                        self.step();
+                        self.start_time = time;
+                    }
 
-            ui.label(format!("Shift operations: {}", self.shifts));
-            ui.label(format!("Or operations: {}", self.ors));
-            ui.label(format!("And operationsg: {}", self.ands));
+                    ui.label(format!("Shift operations: {}", self.shifts));
+                    ui.label(format!("Or operations: {}", self.ors));
+                    ui.label(format!("And operationsg: {}", self.ands));
 
-            if let Some(dist) = self.len {
-                ui.label(format!("Length: {dist}"));
-            }
+                    if let Some(dist) = self.len {
+                        ui.label(format!("Length: {dist}"));
+                    }
+                });
+                let theme =
+                    egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
+                let code = ALGO;
+                egui_extras::syntax_highlighting::code_view_ui(ui, &theme, code, "rs");
+            });
         });
     }
 }

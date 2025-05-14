@@ -4,6 +4,60 @@ use std::collections::{BTreeSet, VecDeque};
 
 const N: usize = 4;
 
+const BFS_ALGO: &'static str = "
+pub fn min_dist_array_bfs(walls: Vec<Vec<bool>>, size: usize) -> usize {
+    let mut queue = VecDeque::new();
+    let mut enqueued = BTreeSet::new();
+
+    queue.push_back(((1, 0), 0));
+    enqueued.insert((1, 0));
+
+    while let Some((p, dist)) = queue.pop_front() {
+        if p == (size - 2, size - 1) {
+            return dist;
+        }
+
+        for dir in DIRS {
+            if let Some(next) = dir.translate(p, size) {
+                if !walls[next.1][next.0] && !enqueued.contains(&next) {
+                    queue.push_back((next, dist + 1));
+                    enqueued.insert(next);
+                }
+            }
+        }
+    }
+
+    panic!(\"No solution found!\");
+}
+";
+
+const DFS_ALGO: &'static str = "
+pub fn min_dist_array_dfs(walls: Vec<Vec<bool>>, size: usize) -> usize {
+    let mut stack = Vec::new();
+    let mut enqueued = BTreeSet::new();
+
+    stack.push(((1, 0), 0));
+    enqueued.insert((1, 0));
+
+    while let Some((p, dist)) = stack.pop() {
+        if p == (size - 2, size - 1) {
+            return dist;
+        }
+
+        for dir in DIRS {
+            if let Some(next) = dir.translate(p, size) {
+                if !walls[next.1][next.0] && !enqueued.contains(&next) {
+                    stack.push((next, dist + 1));
+                    enqueued.insert(next);
+                }
+            }
+        }
+    }
+
+    panic!(\"No solution found!\");
+}
+";
+
 pub struct ArraySolverApp {
     pub gui_scale: f32,
 
@@ -156,40 +210,48 @@ impl eframe::App for ArraySolverApp {
         let time = ctx.input(|i| i.time);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Array solver");
+            ui.horizontal_top(|ui| {
+                ui.vertical(|ui| {
+                    ui.label("Array solver");
 
-            let grid = self.colour_grid();
-            let maze_display = crate::board::BoardDisplay {
-                size: 256. * self.gui_scale,
-                grid,
-                n: 2 * N + 1,
-            };
-            ui.add(maze_display);
+                    let grid = self.colour_grid();
+                    let maze_display = crate::board::BoardDisplay {
+                        size: 256. * self.gui_scale,
+                        grid,
+                        n: 2 * N + 1,
+                    };
+                    ui.add(maze_display);
 
-            if ui.button("Generate maze").clicked() {
-                self.reset(time);
-            }
-            let mut stepped = false;
-            if ui.button("Step").clicked() {
-                self.step();
-                stepped = true;
-            }
+                    if ui.button("Generate maze").clicked() {
+                        self.reset(time);
+                    }
+                    let mut stepped = false;
+                    if ui.button("Step").clicked() {
+                        self.step();
+                        stepped = true;
+                    }
 
-            ui.checkbox(&mut self.auto, "Autosolve");
-            if self.auto && !stepped && !self.done() && time - self.start_time > 0.05 {
-                self.step();
-                self.start_time = time;
-            }
-            ui.checkbox(&mut self.dfs, "DFS");
+                    ui.checkbox(&mut self.auto, "Autosolve");
+                    if self.auto && !stepped && !self.done() && time - self.start_time > 0.05 {
+                        self.step();
+                        self.start_time = time;
+                    }
+                    ui.checkbox(&mut self.dfs, "DFS");
 
-            ui.label(format!("Queue pushes: {}", self.pushes));
-            ui.label(format!("Queue pops: {}", self.pops));
-            ui.label(format!("Set contains: {}", self.contains));
-            ui.label(format!("Set insertions: {}", self.inserts));
+                    ui.label(format!("Queue pushes: {}", self.pushes));
+                    ui.label(format!("Queue pops: {}", self.pops));
+                    ui.label(format!("Set contains: {}", self.contains));
+                    ui.label(format!("Set insertions: {}", self.inserts));
 
-            if let Some(dist) = self.len {
-                ui.label(format!("Length: {dist}"));
-            }
+                    if let Some(dist) = self.len {
+                        ui.label(format!("Length: {dist}"));
+                    }
+                });
+                let theme =
+                    egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
+                let code = if self.dfs { DFS_ALGO } else { BFS_ALGO };
+                egui_extras::syntax_highlighting::code_view_ui(ui, &theme, code, "rs");
+            });
         });
     }
 }

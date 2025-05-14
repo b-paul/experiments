@@ -1,11 +1,6 @@
 use eframe::egui;
 
-mod array_solver;
-mod bitboard_demo;
-mod bitboard_solver;
-mod board;
-mod intro;
-mod maze;
+use maze_talk::*;
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions::default();
@@ -18,10 +13,10 @@ fn main() -> eframe::Result {
 
 #[derive(Default, PartialEq, Eq)]
 enum Slide {
+    #[default]
     IntroPage,
     ArraySolver,
     BitboardDemo,
-    #[default]
     BitboardSolver,
 }
 

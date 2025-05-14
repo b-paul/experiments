@@ -1,0 +1,23 @@
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
+
+use maze_talk::maze::Maze;
+use maze_talk::solvers::min_dist_bitboards;
+
+use rand::prelude::*;
+
+fn criterion_benchmark(c: &mut Criterion) {
+    let mut rng = SmallRng::from_seed([0x41; 32]);
+    c.bench_function("bb", |b| {
+        b.iter_batched(
+            || {
+                let maze = Maze::random_with_rng(4, &mut rng);
+                maze.bb()
+            },
+            |grid| black_box(min_dist_bitboards(grid)),
+            criterion::BatchSize::SmallInput,
+        )
+    });
+}
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);

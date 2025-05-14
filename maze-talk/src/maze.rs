@@ -44,7 +44,7 @@ impl Direction {
 }
 
 impl Maze {
-    pub fn random(n: usize) -> Self {
+    pub fn random_with_rng(n: usize, rng: &mut impl rand::RngCore) -> Self {
         use rand::prelude::*;
 
         let vertical_walls = (0..n).map(|_| vec![true; n]).collect::<Vec<_>>();
@@ -63,13 +63,11 @@ impl Maze {
             .flat_map(|a| (0..n).map(move |b| (a, b)))
             .collect::<HashSet<_>>();
 
-        let mut rng = rand::rng();
-
-        let &initial = to_visit.iter().choose(&mut rng).unwrap();
+        let &initial = to_visit.iter().choose(rng).unwrap();
         to_visit.remove(&initial);
         visited.insert(initial);
 
-        while let Some(&p) = to_visit.iter().choose(&mut rng) {
+        while let Some(&p) = to_visit.iter().choose(rng) {
             let mut path = vec![p];
             let mut dirs = Vec::new();
             let mut path_set = HashSet::new();
@@ -80,7 +78,7 @@ impl Maze {
                 let (dir, next) = DIRS
                     .iter()
                     .flat_map(|d| d.translate(*path.last().unwrap(), n).map(|p| (d, p)))
-                    .choose(&mut rng)
+                    .choose(rng)
                     .unwrap();
 
                 if path_set.contains(&next) {
@@ -108,6 +106,11 @@ impl Maze {
             }
         }
         maze
+    }
+
+    pub fn random(n: usize) -> Self {
+        let mut random = rand::rng();
+        Self::random_with_rng(n, &mut random)
     }
 
     fn remove_wall(&mut self, (x, y): (usize, usize), dir: Direction) {
@@ -139,6 +142,22 @@ impl Maze {
             }
         }
 
+        grid
+    }
+
+    pub fn bb(&self) -> u64 {
+        let mut grid = 0;
+        for (y, row) in self.grid().into_iter().enumerate() {
+            for (x, b) in row.into_iter().enumerate() {
+                if x == 0 || x == 8 {
+                    continue;
+                }
+                if b {
+                    // should probably put this indexing stuff in a function or something
+                    grid |= 1 << (7 * (8 - y) + (6 - (x - 1)));
+                }
+            }
+        }
         grid
     }
 }

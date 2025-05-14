@@ -5,4 +5,20 @@ edition = "2024"
 
 [dependencies]
 eframe = "0.31.1"
+egui_extras = "0.31.1"
 rand = "0.9.1"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "dfs_solver"
+harness = false
+
+[[bench]]
+name = "bfs_solver"
+harness = false
+
+[[bench]]
+name = "bitboard_solver"
+harness = false
