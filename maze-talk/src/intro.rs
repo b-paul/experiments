@@ -7,7 +7,7 @@ impl eframe::App for IntroApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("\"Fast maze solving using epic bit manipulation tricks\" by bpaul");
-            ui.label("Today we will be searching through 8x8 mazes really quickly!");
+            ui.label("Today we will be searching through 9x9 mazes really quickly!");
             
             ui.add_space(12.0);
 

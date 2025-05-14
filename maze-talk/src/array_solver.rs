@@ -5,6 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 const N: usize = 4;
 
 pub struct ArraySolverApp {
+    pub gui_scale: f32,
+
     maze: crate::maze::Maze,
     grid: Vec<Vec<bool>>,
     visited: Vec<Vec<bool>>,
@@ -125,6 +127,8 @@ impl Default for ArraySolverApp {
     fn default() -> Self {
         let maze = crate::maze::Maze::random(N);
         let mut app = Self {
+            gui_scale: 1.,
+
             maze,
             grid: Vec::new(),
             visited: Vec::new(),
@@ -156,7 +160,7 @@ impl eframe::App for ArraySolverApp {
 
             let grid = self.colour_grid();
             let maze_display = crate::board::BoardDisplay {
-                size: 256.,
+                size: 256. * self.gui_scale,
                 grid,
                 n: 2 * N + 1,
             };

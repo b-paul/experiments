@@ -3,6 +3,8 @@ use eframe::egui;
 const N: usize = 4;
 
 pub struct BitboardSolverApp {
+    pub gui_scale: f32,
+
     maze: crate::maze::Maze,
     // 7 wide 9 high grid.
     grid: u64,
@@ -103,6 +105,7 @@ impl Default for BitboardSolverApp {
     fn default() -> Self {
         let maze = super::maze::Maze::random(N);
         let mut app = Self {
+            gui_scale: 1.,
             maze,
             grid: 0,
             visited: 0,
@@ -120,14 +123,14 @@ impl Default for BitboardSolverApp {
 }
 
 impl eframe::App for BitboardSolverApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
         let time = ctx.input(|i| i.time);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let grid = self.colour_grid();
             let maze_display = crate::board::BoardDisplay {
-                size: 256.,
+                size: 256. * self.gui_scale,
                 grid,
                 n: 2 * N + 1,
             };

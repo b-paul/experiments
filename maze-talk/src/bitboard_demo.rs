@@ -1,16 +1,18 @@
 use eframe::egui;
 
-const BBSIZE: f32 = 115.;
+const BBSIZE: f32 = 230.;
 
 #[derive(Default)]
 pub struct BitboardDemoApp {
+    pub gui_scale: f32,
+
     bbs: [u64; 3],
 }
 
 impl BitboardDemoApp {
     fn draw_bb(&mut self, ui: &mut egui::Ui, index: usize) {
         ui.vertical(|ui| {
-            ui.set_width(BBSIZE);
+            ui.set_width(BBSIZE * self.gui_scale);
             let grid = (0..8)
                 .rev()
                 .map(|y| {
@@ -24,7 +26,7 @@ impl BitboardDemoApp {
                 })
                 .collect();
             let maze_display = crate::board::BoardDisplay {
-                size: BBSIZE,
+                size: BBSIZE * self.gui_scale,
                 grid,
                 n: 8,
             };
@@ -32,7 +34,7 @@ impl BitboardDemoApp {
             // TODO drag well
             if r.clicked() {
                 if let Some(click_pos) = r.interact_pointer_pos() {
-                    let rel_pos = (click_pos - r.rect.min) / BBSIZE * 8.;
+                    let rel_pos = (click_pos - r.rect.min) / (BBSIZE * self.gui_scale) * 8.;
                     let (x, y) = (rel_pos.x.floor() as usize, rel_pos.y.floor() as usize);
                     if x <= 7 && y <= 7 {
                         self.bbs[index] ^= 1 << (8 * (7 - y) + (7 - x));
