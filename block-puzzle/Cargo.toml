@@ -1,0 +1,8 @@
+[package]
+name = "block-puzzle"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+good_lp = "1.15.3"
+itertools = "0.15.0"
